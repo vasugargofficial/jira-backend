@@ -1,0 +1,41 @@
+version: '3'
+services:
+  db:
+    image: postgres:10-alpine
+    environment:
+      POSTGRES_PASSWORD: jirapwd
+      POSTGRES_USER: jirauser
+      POSTGRES_DB:  jira
+    ports:
+      - "5432:5432"
+    volumes:
+      - jira_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: "pg_isready -U jirauser -d jira"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    volumes:
+      - .:/code
+    command: bash -c "python manage.py migrate && python ./manage.py runserver 0.0.0.0:8000"
+    # command: python ./manage.py runserver_plus 0.0.0.0:8000 --print-sql
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SECRET_KEY: "H9Ddkf9tBDhMdjjguAyGn"
+      DATABASE_ENGINE: django.db.backends.postgresql
+      DATABASE_NAME: jira
+      DATABASE_USER: jirauser
+      DATABASE_PASSWORD: jirapwd
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      DJANGO_DEBUG: 1
+
+volumes:
+  jira_postgres_data:
